@@ -1990,7 +1990,7 @@ class ContributorNotification(base):
             components = [getattr(self, field)
                           for field in self.id_dependencies]
             self.contributor_notification_id = (
-                f"{self.contributor_notification_id}:RN-{components[1]}"
+                f"{self.contributor_id}:RN-{components[1]}"
                 f":DT-{components[2]}"
             )
 
@@ -2509,8 +2509,7 @@ def init(ctx, datadir, init_search_index):
     discovery_metadata = os.path.join(datadir, 'woudc.skos.yaml')
     station_dobson_corrections = os.path.join(
         datadir, 'station_dobson_corrections.csv')
-    # contributor_notifications = os.path.join(
-    #     datadir, 'contributor_notifications.csv')
+    contributor_notifications = os.path.join(datadir, 'contributor_notifications.csv')
 
     registry_ = registry.Registry()
 
@@ -2526,6 +2525,7 @@ def init(ctx, datadir, init_search_index):
     notification_models = []
     discovery_metadata_models = []
     station_dobson_corrections_models = []
+    contributor_notifications_models = []
 
     click.echo('Loading WMO countries metadata')
     with open(wmo_countries) as jsonfile:
@@ -2566,11 +2566,11 @@ def init(ctx, datadir, init_search_index):
             contributor_models.append(contributor)
 
     click.echo('Loading contributor notifications metadata')
-    # with open(contributor_notifications) as csvfile:
-    #     reader = csv.DictReader(csvfile)
-    #     for row in reader:
-    #         contributor_notifications = ContributorNotification(row)
-    #         notification_models.append(contributor_notifications)
+    with open(contributor_notifications) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            contributor_notifications = ContributorNotification(row)
+            contributor_notifications_models.append(contributor_notifications)
 
     click.echo('Loading station names metadata')
     with open(station_names) as csvfile:
@@ -2690,6 +2690,9 @@ def init(ctx, datadir, init_search_index):
         registry_.save(model)
     click.echo('Storing station dobson corrections items in data registry')
     for model in station_dobson_corrections_models:
+        registry_.save(model)
+    click.echo('Storing contibutor notifications items in data registry')
+    for model in contributor_notifications_models:
         registry_.save(model)
 
     instrument_from_registry = registry_.query_full_index(Instrument)
