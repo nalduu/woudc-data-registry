@@ -337,7 +337,19 @@ class Instrument(base):
         self.name = dict_['name']
         self.model = dict_['model']
         self.serial = dict_['serial']
-        self.dataset_id = dict_['dataset_id']
+
+        dataset_id_parts = dict_['dataset_id'].split('_')
+
+        if len(dataset_id_parts) == 1:  # no "_" found
+            # handle missing "_" case...
+            LOGGER.error(f'Dataset ID "{dict_["dataset_id"]}" is '
+                         f'missing dataset name or level')
+        else:  # proceed as normal
+            dataset_name = dataset_id_parts[0]
+            dataset_level = str(float(dataset_id_parts[-1]))
+
+            self.dataset_id = f"{dataset_name}_{dataset_level}"
+
         self.contributor = dict_['contributor']
         self.project = dict_['project']
 
