@@ -123,6 +123,8 @@ data/station_names.csv
 data/stations.csv
 data/dobsonCorrections/TEMIS_Teff/
 data/dobsonCorrections/WOUDC_stations_TEMIS_combined/
+data/station_dobson_corrections_internal.csv
+data/**/*.dat
 
 # testing
 post_ingest_logs
