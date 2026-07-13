@@ -2315,7 +2315,7 @@ def setup_dobson_correction(ctx, datadir, verbosity):
     click.echo('Loading station dobson corrections items')
     with open(station_dobson_corrections, encoding='utf-8-sig') as csvfile:
         reader = csv.DictReader(csvfile)
-        wlcodes = [0, 2, 4, 6]
+        wlcodes = [0, 2, 3, 4, 6, 7]
 
         for row in reader:
             station_dobson_corrections_models += create_dobson_correction_model(row, wlcodes)  # noqa
@@ -2410,7 +2410,7 @@ def create_dobson_correction_model(row, wlcodes):
     # temp['correction_comments'] = row['special comments']
 
     for wl in wlcodes:
-        temp['station'] = row['station']
+        temp['station'] = row['station'][3:]
         temp['wlcode'] = str(wl)
         if wl in [2, 6] and temp['station'] not in ['107', '429']:
             if row['CD-bias corrected'] == 'TRUE' and row[
@@ -2424,14 +2424,13 @@ def create_dobson_correction_model(row, wlcodes):
             else:
                 # DNC = do not correct
                 temp['correction_recipe'] = 'DNC'
-        elif wl in [0, 4]:
+        elif wl in [0, 4, 3, 7]:
             temp['correction_recipe'] = 'AD'
-        else:
-            temp['correction_recipe'] = 'DNC'
-
-        temp_rows.append(temp.copy())
-        # reset to not carry over values to next wlcode iteration
-        temp = {}
+        if int(temp['wlcode']) not in [2, 6] or temp['station'
+                                                     ] not in ['107', '429']:
+            temp_rows.append(temp.copy())
+            # reset to not carry over values to next wlcode iteration
+            temp = {}
 
     for temp in temp_rows:
         station_dobson_corrections = StationDobsonCorrections(temp)
@@ -2639,7 +2638,7 @@ def init(ctx, datadir, init_search_index, verbosity):
         click.echo('Loading station dobson corrections items')
         with open(station_dobson_corrections) as csvfile:
             reader = csv.DictReader(csvfile)
-            wlcodes = [0, 2, 4, 6]
+            wlcodes = [0, 2, 3, 4, 6, 7]
             for row in reader:
                 station_dobson_corrections_models += create_dobson_correction_model(row, wlcodes)  # noqa
 
