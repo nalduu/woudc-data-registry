@@ -354,7 +354,12 @@ def correct_file(csv_file, csv_content, code, mode):
                 # could be string representation instead of int
                 # e.g: AD instead of 0, CD instead of 2, etc.
                 if isinstance(i[wlcode_ind], str):
-                    wlcode = i[wlcode_ind]
+                    if i[wlcode_ind] == 'AD':
+                        wlcode = '0'
+                    elif i[wlcode_ind] == 'CD':
+                        wlcode = '2'
+                    else:
+                        wlcode = i[wlcode_ind]
                 else:
                     wlcode = (
                         float(i[wlcode_ind])
@@ -383,6 +388,9 @@ def correct_file(csv_file, csv_content, code, mode):
                                 dat_file, correction_factor, day_of_year
                             )
                         break
+                elif (wlcode == case.wlcode and
+                      case.correction_recipe == 'DNC'):
+                    ColumnO3Corrected = 'NaN'
 
             if column03 == '' or Coeff == '':
                 LOGGER.warning(f"ColumnO3 is empty in line: {i}")
@@ -392,7 +400,7 @@ def correct_file(csv_file, csv_content, code, mode):
             # Create the fixed lines
             replacing_string = ",".join(i)
 
-            if ColumnO3Corrected != '':
+            if ColumnO3Corrected not in ['', 'NaN']:
                 deltaColumnO3corrected = (
                     ColumnO3Corrected - column03
                 )

@@ -2315,10 +2315,10 @@ def setup_dobson_correction(ctx, datadir, verbosity):
     click.echo('Loading station dobson corrections items')
     with open(station_dobson_corrections, encoding='utf-8-sig') as csvfile:
         reader = csv.DictReader(csvfile)
-        wlcodes = [0, 2, 3, 4, 6, 7]
-
+        wl_obs_codes = {0: None, 2: None,
+                        3: [2, 3, 4, 5, 6, 7], 4: None, 6: None}
         for row in reader:
-            station_dobson_corrections_models += create_dobson_correction_model(row, wlcodes)  # noqa
+            station_dobson_corrections_models += create_dobson_correction_model(row, wl_obs_codes)  # noqa
 
     click.echo('Storing station dobson corrections items in registry')
     for model in station_dobson_corrections_models:
@@ -2373,14 +2373,21 @@ def setup_dobson_correction(ctx, datadir, verbosity):
     click.echo("Done")
 
 
-def create_dobson_correction_model(row, wlcodes):
+def create_dobson_correction_model(row, wl_obs_codes):
     """given a row of data from the station_dobson_corrections.csv file, and
-       a list of wlcodes, create a list of StationDobsonCorrections models
-       and return it. """
+       a dictionary of wlcode and obscode combinations,
+       create a list of StationDobsonCorrections models and return it.
+       wl_obs_codes: dict, key = wlcode, value = list[obscodes] or None
+       """
     station_dobson_corrections_models = []
     special_cases = []
     temp_rows = []
-    temp = {}
+
+    CORRECT_AD = [0, 3, 4]
+    CORRECT_CD = [2, 6]
+    SKIP_STATIONS = ['107', '429']
+    station = row['station'][3:]
+
     if row['special_corrections'] != '':
         # handled special cases:
         special_cases = row['special_corrections'].split(',')
@@ -2396,41 +2403,42 @@ def create_dobson_correction_model(row, wlcodes):
                 continue
             else:
                 case_list = case.strip().split(':')
-                temp['station'] = case_list[0]
-                temp['wlcode'] = case_list[1]
-                if case_list[2] == 'None':
-                    temp['obscode'] = None
-                else:
-                    temp['obscode'] = case_list[2]
-                temp['correction_recipe'] = case_list[3]
-                temp_rows.append(temp.copy())
-                # reset to not carry over values to next case iteration
-                temp = {}
+                temp = {
+                    'station': station,
+                    'wlcode': case_list[1],
+                    'obscode': None if case_list[2
+                                                 ] == 'None' else case_list[2],
+                    'correction_recipe': case_list[3]
+                }
+                temp_rows.append(temp)
 
     # temp['correction_comments'] = row['special comments']
 
-    for wl in wlcodes:
-        temp['station'] = row['station'][3:]
-        temp['wlcode'] = str(wl)
-        if wl in [2, 6] and temp['station'] not in ['107', '429']:
-            if row['CD-bias corrected'] == 'TRUE' and row[
-                    'Confirmed'] == 'TRUE':
-                # AD corrections for wlcode = 2,6
+    for wl, obscodes in wl_obs_codes.items():
+        # if no obscode cases, we insert with obscode = None (i.e Any obscode)
+        for obscode in (obscodes or [None]):
+            temp = {
+                "station": station,
+                "wlcode": str(wl),
+                "obscode": None if obscode is None else str(obscode),
+            }
+            if wl in CORRECT_AD:
                 temp['correction_recipe'] = 'AD'
-            elif row['CD-bias corrected'] == 'FALSE' and row[
-                    'Confirmed'] == 'TRUE':
-                # CD corrections for wlcode = 2,6
-                temp['correction_recipe'] = 'CD'
-            else:
-                # DNC = do not correct
-                temp['correction_recipe'] = 'DNC'
-        elif wl in [0, 4, 3, 7]:
-            temp['correction_recipe'] = 'AD'
-        if int(temp['wlcode']) not in [2, 6] or temp['station'
-                                                     ] not in ['107', '429']:
-            temp_rows.append(temp.copy())
-            # reset to not carry over values to next wlcode iteration
-            temp = {}
+            elif wl in CORRECT_CD and station not in SKIP_STATIONS:
+                if row['CD-bias corrected'] == 'TRUE' and row[
+                       'Confirmed'] == 'TRUE':
+                    # AD corrections for wlcode = 2,6
+                    temp['correction_recipe'] = 'AD'
+                elif row['CD-bias corrected'] == 'FALSE' and row[
+                        'Confirmed'] == 'TRUE':
+                    # CD corrections for wlcode = 2,6
+                    temp['correction_recipe'] = 'CD'
+                else:
+                    # DNC = do not correct
+                    temp['correction_recipe'] = 'DNC'
+
+            if wl not in CORRECT_CD or station not in SKIP_STATIONS:
+                temp_rows.append(temp)
 
     for temp in temp_rows:
         station_dobson_corrections = StationDobsonCorrections(temp)
@@ -2638,9 +2646,10 @@ def init(ctx, datadir, init_search_index, verbosity):
         click.echo('Loading station dobson corrections items')
         with open(station_dobson_corrections) as csvfile:
             reader = csv.DictReader(csvfile)
-            wlcodes = [0, 2, 3, 4, 6, 7]
+            wl_obs_codes = {0: None, 2: None,
+                            3: [2, 3, 4, 5, 6, 7], 4: None, 6: None}
             for row in reader:
-                station_dobson_corrections_models += create_dobson_correction_model(row, wlcodes)  # noqa
+                station_dobson_corrections_models += create_dobson_correction_model(row, wl_obs_codes)  # noqa
 
     except FileNotFoundError:
         click.echo(f"[WARNING] File not found: {station_dobson_corrections}. "
